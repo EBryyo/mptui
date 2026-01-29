@@ -5,19 +5,25 @@
 #include <memory>
 #include <string>
 
-ftxui::Elements renderNode(FileNode &node, FileNode* selected_node, int depth) {
+ftxui::Elements renderNode(FileNode &node, FileNode* hovered_node, FileNode* selected_node, int depth) {
   ftxui::Elements elements;
 
   std::string prefix = std::string(depth * 2, ' ');
-  auto highlight = &node == selected_node ? ftxui::inverted : ftxui::nothing;
+  auto highlight = &node == hovered_node 
+      ? ftxui::inverted
+    : &node == selected_node 
+    ? ftxui::bgcolor(ftxui::Color::DarkBlue) 
+      : ftxui::nothing;
 
   if (node.is_dir) {
-    elements.push_back(
-        ftxui::text(prefix + (node.expanded ? "▾ ": "▸ ") + node.name) | highlight);
+    if (!node.is_root) {
+      elements.push_back(
+          ftxui::text(prefix + (node.expanded ? "▾ ": "▸ ") + node.name) | highlight);
+    }
 
     if (node.expanded) {
       for (auto &child : node.children) {
-        ftxui::Elements child_elements = renderNode(*child, selected_node, depth + 1);
+        ftxui::Elements child_elements = renderNode(*child, hovered_node, selected_node, depth + 1);
         elements.insert(elements.end(), child_elements.begin(),
                         child_elements.end());
       }
@@ -28,6 +34,7 @@ ftxui::Elements renderNode(FileNode &node, FileNode* selected_node, int depth) {
 
   return elements;
 }
+
 void printTree(FileNode &node, int depth) {
   std::string prefix = std::string(depth * 2, ' ');
   std::cout << prefix << node.name << std::endl;

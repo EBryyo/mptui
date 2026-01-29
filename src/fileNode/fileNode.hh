@@ -14,7 +14,7 @@ struct FileNode {
   std::vector<std::shared_ptr<FileNode>> children;
 };
 
-ftxui::Elements renderNode(FileNode &node, FileNode* selected_node_, int depth = 0);
+ftxui::Elements renderNode(FileNode &node, FileNode* hovered_node, FileNode* selected_node, int depth = 0);
 
 std::shared_ptr<FileNode> createTree(std::string path);
 

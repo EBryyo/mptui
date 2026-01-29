@@ -16,7 +16,8 @@ public:
 private:
   std::shared_ptr<FileNode> root_;
   FileNode *selected_ = nullptr;
-  int selected_index_ = -1; // -1 means no selection
+  FileNode *hovered_ = nullptr;
+  int hovered_index_ = -1; // -1 means no selection
   std::vector<FileNode*> visible_nodes_;
 
   void BuildVisible(FileNode& node);
