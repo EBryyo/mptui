@@ -5,24 +5,25 @@
 #include <memory>
 #include <string>
 
-ftxui::Elements renderNode(FileNode &node, int depth) {
+ftxui::Elements renderNode(FileNode &node, FileNode* selected_node, int depth) {
   ftxui::Elements elements;
 
   std::string prefix = std::string(depth * 2, ' ');
+  auto highlight = &node == selected_node ? ftxui::inverted : ftxui::nothing;
 
   if (node.is_dir) {
     elements.push_back(
-        ftxui::text(prefix + (node.expanded ? "v " : "> ") + node.name));
+        ftxui::text(prefix + (node.expanded ? "▾ ": "▸ ") + node.name) | highlight);
 
     if (node.expanded) {
       for (auto &child : node.children) {
-        ftxui::Elements child_elements = renderNode(*child, depth + 1);
+        ftxui::Elements child_elements = renderNode(*child, selected_node, depth + 1);
         elements.insert(elements.end(), child_elements.begin(),
                         child_elements.end());
       }
     }
   } else {
-    elements.push_back(ftxui::text(prefix + "f " + node.name));
+    elements.push_back(ftxui::text(prefix + node.name) | highlight);
   }
 
   return elements;
