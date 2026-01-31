@@ -5,31 +5,33 @@
 #include <memory>
 #include <string>
 
-ftxui::Elements renderNode(FileNode &node, FileNode* hovered_node, FileNode* selected_node, int depth) {
+ftxui::Elements renderNode(FileNode &node, FileNode *hovered_node,
+                           FileNode *selected_node, int depth) {
   ftxui::Elements elements;
 
   std::string prefix = std::string(depth * 2, ' ');
-  auto highlight = &node == hovered_node 
-      ? ftxui::inverted
-    : &node == selected_node 
-    ? ftxui::bgcolor(ftxui::Color::DarkBlue) 
-      : ftxui::nothing;
+  auto highlight = &node == hovered_node ? ftxui::inverted
+                   : &node == selected_node
+                       ? ftxui::bgcolor(ftxui::Color::DarkBlue)
+                       : ftxui::nothing;
 
   if (node.is_dir) {
     if (!node.is_root) {
       elements.push_back(
-          ftxui::text(prefix + (node.expanded ? "▾ ": "▸ ") + node.name) | highlight);
+          ftxui::text(prefix + (node.expanded ? "▾ " : "▸ ") + node.name) |
+          highlight | ftxui::bold);
     }
 
     if (node.expanded) {
       for (auto &child : node.children) {
-        ftxui::Elements child_elements = renderNode(*child, hovered_node, selected_node, depth + 1);
+        ftxui::Elements child_elements =
+            renderNode(*child, hovered_node, selected_node, depth + 1);
         elements.insert(elements.end(), child_elements.begin(),
                         child_elements.end());
       }
     }
   } else {
-    elements.push_back(ftxui::text(prefix + node.name) | highlight);
+    elements.push_back(ftxui::text(prefix + node.name) | highlight );
   }
 
   return elements;
@@ -38,7 +40,7 @@ ftxui::Elements renderNode(FileNode &node, FileNode* hovered_node, FileNode* sel
 void printTree(FileNode &node, int depth) {
   std::string prefix = std::string(depth * 2, ' ');
   std::cout << prefix << node.name << std::endl;
-  for (auto& child : node.children) {
+  for (auto &child : node.children) {
     printTree(*child, depth + 1);
   }
 }
@@ -52,7 +54,7 @@ static void createTreeHelper(std::shared_ptr<FileNode> node) {
     child_ptr->is_dir = entry.is_directory();
     child_ptr->expanded = true;
     child_ptr->path = entry.path();
-    child_ptr->name = child_ptr->path.filename();
+    child_ptr->name = child_ptr->path.stem();
     child_ptr->is_album = false;
 
     if (child_ptr->is_dir) {
@@ -62,8 +64,13 @@ static void createTreeHelper(std::shared_ptr<FileNode> node) {
                        [](auto child) { return child->is_dir; });
     }
 
-    node->children.push_back(child_ptr);
+    if (child_ptr->is_dir || child_ptr->path.extension() == ".mp3" || child_ptr->path.extension() == ".flac") {
+      node->children.push_back(child_ptr);
+    }
   }
+  std::sort(
+      node->children.begin(), node->children.end(),
+      [](std::shared_ptr<FileNode>& a, std::shared_ptr<FileNode>& b) { return a->name.compare(b->name) < 0; });
 }
 
 std::shared_ptr<FileNode> createTree(std::string path) {
