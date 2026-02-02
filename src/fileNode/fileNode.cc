@@ -1,5 +1,5 @@
-#include "fileNode.hh"
 #include <algorithm>
+#include <fileNode.hh>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -10,8 +10,8 @@ ftxui::Elements renderNode(FileNode &node, FileNode *hovered_node,
   ftxui::Elements elements;
 
   std::string prefix = std::string(depth * 2, ' ');
-  auto highlight = &node == hovered_node ? ftxui::inverted
-                   : &node == selected_node
+  auto highlight = &node == selected_node ? ftxui::inverted
+                   : &node == hovered_node
                        ? ftxui::bgcolor(ftxui::Color::DarkBlue)
                        : ftxui::nothing;
 
@@ -31,9 +31,9 @@ ftxui::Elements renderNode(FileNode &node, FileNode *hovered_node,
       }
     }
   } else {
-    elements.push_back(ftxui::text(prefix + node.name) | highlight );
+    elements.push_back(ftxui::text(prefix + "- " + node.track->title) |
+                       highlight);
   }
-
   return elements;
 }
 
@@ -48,29 +48,41 @@ void printTree(FileNode &node, int depth) {
 static void createTreeHelper(std::shared_ptr<FileNode> node) {
   auto fs_iterator = std::filesystem::directory_iterator(node->path);
 
-  for (auto &entry : fs_iterator) {
+  for (const auto &entry : fs_iterator) {
     auto child_ptr = std::shared_ptr<FileNode>(new FileNode);
     child_ptr->is_root = false;
     child_ptr->is_dir = entry.is_directory();
     child_ptr->expanded = true;
     child_ptr->path = entry.path();
     child_ptr->name = child_ptr->path.stem();
-    child_ptr->is_album = false;
+    child_ptr->parent = node;
 
     if (child_ptr->is_dir) {
       createTreeHelper(child_ptr);
       child_ptr->is_album =
           std::none_of(child_ptr->children.begin(), child_ptr->children.end(),
                        [](auto child) { return child->is_dir; });
+      if (child_ptr->is_album) {
+        child_ptr->expanded = !child_ptr->is_album;
+      }
+    } else {
+      child_ptr->track = readMetadata(child_ptr->path);
     }
 
-    if (child_ptr->is_dir || child_ptr->path.extension() == ".mp3" || child_ptr->path.extension() == ".flac") {
+    if (child_ptr->is_dir || child_ptr->path.extension() == ".mp3" ||
+        child_ptr->path.extension() == ".flac") {
       node->children.push_back(child_ptr);
     }
   }
-  std::sort(
-      node->children.begin(), node->children.end(),
-      [](std::shared_ptr<FileNode>& a, std::shared_ptr<FileNode>& b) { return a->name.compare(b->name) < 0; });
+  std::sort(node->children.begin(), node->children.end(),
+            [](std::shared_ptr<FileNode> &a, std::shared_ptr<FileNode> &b) {
+              if (a->track && b->track && a->track->index != -1 &&
+                  b->track->index != -1) {
+                return a->track->index < b->track->index;
+              } else {
+                return a->name.compare(b->name) < 0;
+              }
+            });
 }
 
 std::shared_ptr<FileNode> createTree(std::string path) {

@@ -1,15 +1,14 @@
-add_library(fileNode
+add_library(action
     fileNode.cc
     fileNode.hh
 )
 
-target_link_libraries(fileNode PRIVATE
+target_link_libraries(action PRIVATE
     track
     project_warnings
-    ftxui::dom
 )
 
-target_include_directories(fileNode PUBLIC 
+target_include_directories(action PUBLIC 
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/src
 )

@@ -1,34 +1,31 @@
-#include "fileExplorer/fileExplorer.hh"
-#include "fileNode/fileNode.hh"
+#include <fileNode/fileNode.hh>
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/component_base.hpp>
 #include <ftxui/component/event.hpp>
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/screen/screen.hpp>
-#include <iostream>
+#include <stateWrapper/stateWrapper.hh>
 
 #define FILES_PATH "~/Music/"
 
 int main(int argc, char **argv) {
   auto root = createTree(FILES_PATH);
 
-  ftxui::Component explorer = std::make_shared<FileExplorer>(root);
+  ftxui::Component state = std::make_shared<StateWrapper>(root);
 
   auto screen = ftxui::ScreenInteractive::Fullscreen();
 
-  int explorer_size = 30;
-
-  ftxui::Component details = ftxui::Renderer(
-      [] { return ftxui::text("Details Pane") | ftxui::flex | ftxui::center; });
-
-  ftxui::Component split =
-      ftxui::ResizableSplitLeft(explorer, details, &explorer_size);
-
-  auto layout = ftxui::Renderer(split, [&] {
-    return ftxui::window(ftxui::text("File Explorer"), split->Render()) |
+  auto layout = ftxui::Renderer(state, [&] {
+    return ftxui::window(ftxui::text("MPTUI") | ftxui::bold, state->Render()) |
            ftxui::flex;
   });
+
+  // auto layout =
+  //     ftxui::Renderer(state, [&] { return state->Render() | ftxui::flex; });
+
+  // Ensure the file explorer has initial keyboard focus.
+  state->TakeFocus();
 
   screen.Loop(layout);
 
