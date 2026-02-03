@@ -1,5 +1,6 @@
 #pragma once
 #include <action/action.hh>
+#include <audioEngine/audioEngine.hh>
 #include <fileExplorer/fileExplorer.hh>
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/component_base.hpp>
@@ -65,6 +66,8 @@ private:
 
   int explorer_size_ = DEFAULT_EXPLORER_SIZE;
   int track_list_size_ = DEFAULT_QUEUE_SIZE;
+
+  AudioEngine engine_;
 
   void ChangeTrack();
   void ChangeQueue();

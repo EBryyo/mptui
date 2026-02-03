@@ -15,6 +15,13 @@ void StateWrapper::ProcessActions() {
 
   if (action->type == SELECT) {
     music_player_->setTrack(action->track.value());
+    engine_.Play(action->track.value()->path);
+  } else if (action->type == PAUSE_RESUME) {
+    if (engine_.Snapshot().playing) {
+      engine_.Pause();
+    } else {
+      engine_.Resume();
+    }
   }
 
   // force re-draw

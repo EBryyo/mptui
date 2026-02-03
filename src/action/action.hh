@@ -5,7 +5,7 @@
 
 enum ActionType {
   PLAY,
-  PAUSE,
+  PAUSE_RESUME,
   SELECT,
   SET_QUEUE,
   STOP,

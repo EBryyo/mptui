@@ -30,13 +30,14 @@ public:
 private:
   std::shared_ptr<FileNode> root_;
   std::vector<FileNode *> visible_nodes_;
-  std::queue<std::unique_ptr<Action>> *actions_;
   FileNode *selected_ = nullptr; // currently selected node
   FileNode *hovered_ = nullptr;  // node being hovered above
   int hovered_index_ = -1;       // -1 means no selection
 
   ftxui::Box box_;
   bool focused = false;
+
+  std::queue<std::unique_ptr<Action>> *actions_;
 
   bool handleMouse(ftxui::Event event);
   bool handleKeyboard(ftxui::Event event);

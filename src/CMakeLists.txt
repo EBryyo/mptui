@@ -7,6 +7,7 @@ add_subdirectory(musicPlayer)
 add_subdirectory(trackQueue)
 add_subdirectory(stateWrapper)
 add_subdirectory(action)
+add_subdirectory(audioEngine)
 
 # Fetch FTXUI
 FetchContent_Declare(
@@ -26,6 +27,7 @@ target_link_libraries(
           trackQueue
           musicPlayer
           stateWrapper
+          audioEngine
           ftxui::screen
           ftxui::dom
           ftxui::component)

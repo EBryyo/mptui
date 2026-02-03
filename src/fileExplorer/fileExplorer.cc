@@ -28,8 +28,7 @@ bool FileExplorer::handleMouse(ftxui::Event event) {
         node->expanded = !node->expanded;
       } else {
         // Handle file selection here
-        selected_ = node;
-        onTrackSelect(selected_);
+        onTrackSelect(node);
       }
       flag = true;
     }
@@ -61,7 +60,6 @@ bool FileExplorer::handleKeyboard(ftxui::Event event) {
       node->expanded = !node->expanded;
     } else {
       // Handle file selection here
-      selected_ = node;
       onTrackSelect(node);
     }
     flag = true;
@@ -94,11 +92,11 @@ bool FileExplorer::OnEvent(ftxui::Event event) {
 }
 
 ftxui::Element FileExplorer::OnRender() {
-  return ftxui::vbox(renderNode(
-             *root_,
-             hovered_index_ == -1 ? nullptr : visible_nodes_[hovered_index_],
-             selected_)) |
-         ftxui::flex | ftxui::reflect(box_);
+  auto nodes = renderNode(
+      *root_, hovered_index_ == -1 ? nullptr : visible_nodes_[hovered_index_],
+      selected_);
+
+  return ftxui::vbox(nodes) | ftxui::flex | ftxui::reflect(box_);
 }
 
 void FileExplorer::BuildVisible(FileNode &node) {
@@ -111,12 +109,16 @@ void FileExplorer::BuildVisible(FileNode &node) {
 }
 
 void FileExplorer::onTrackSelect(FileNode *node) {
-  std::shared_ptr<Track> track = node->track;
-
   std::unique_ptr<Action> action = std::unique_ptr<Action>(new Action());
 
-  action->type = SELECT;
-  action->track = track;
+  if (node == selected_) {
+    action->type = PAUSE_RESUME;
+  } else {
+    selected_ = node;
+
+    action->type = SELECT;
+    action->track = node->track;
+  }
 
   actions_->push(std::move(action));
 }
