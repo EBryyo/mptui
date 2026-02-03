@@ -14,9 +14,12 @@ public:
                std::queue<std::unique_ptr<Action>> *actions)
       : root_(root), actions_{actions} {
     BuildVisible(*root_);
-    if (visible_nodes_.size() > 1) {
-      hovered_index_ = 1;
-    }
+
+    render_begin_ = 0;
+    render_end_ = visible_nodes_.size();
+
+    hovered_ = -1;
+    selected_ = nullptr;
   }
 
   // Component functions
@@ -30,9 +33,14 @@ public:
 private:
   std::shared_ptr<FileNode> root_;
   std::vector<FileNode *> visible_nodes_;
-  FileNode *selected_ = nullptr; // currently selected node
-  FileNode *hovered_ = nullptr;  // node being hovered above
-  int hovered_index_ = -1;       // -1 means no selection
+
+  int render_begin_;
+  int render_end_;
+
+  int hovered_;
+  FileNode *selected_;
+
+  int BoxHeight() { return box_.y_max - box_.y_min; }
 
   ftxui::Box box_;
   bool focused = false;
@@ -41,7 +49,8 @@ private:
 
   bool handleMouse(ftxui::Event event);
   bool handleKeyboard(ftxui::Event event);
-  void onTrackSelect(FileNode *node);
+  void onTrackSelect();
+  void onDirectorySelect();
 
   //   void handleSelectTrack(std::shared_ptr<FileNode> node);
 

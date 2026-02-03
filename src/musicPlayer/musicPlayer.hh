@@ -10,13 +10,13 @@ public:
       : actions_{actions} {}
 
   void setTrack(std::shared_ptr<Track> track) { track_ = track; }
+  void setProgress(float progress) { progress_ = progress; }
   // Component functions
 
   ftxui::Element OnRender() override;
 
 private:
   bool playing_ = false;
-  bool shuffle_ = false;
   std::queue<std::unique_ptr<Action>> *actions_;
   std::shared_ptr<Track> track_ = nullptr;
   float progress_ = 0;

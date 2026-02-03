@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <track/track.hh>
 
 ftxui::Elements renderNode(FileNode &node, FileNode *hovered_node,
                            FileNode *selected_node, int depth) {

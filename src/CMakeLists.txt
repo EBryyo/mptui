@@ -1,5 +1,14 @@
 add_executable(mptui main.cc)
 
+# Fetch FTXUI before adding subdirectories that link against it,
+# so targets like ftxui::dom/component are available.
+FetchContent_Declare(
+  ftxui
+  GIT_REPOSITORY https://github.com/ArthurSonzogni/FTXUI.git
+  GIT_TAG main)
+
+FetchContent_MakeAvailable(ftxui)
+
 add_subdirectory(fileNode)
 add_subdirectory(fileExplorer)
 add_subdirectory(track)
@@ -8,14 +17,6 @@ add_subdirectory(trackQueue)
 add_subdirectory(stateWrapper)
 add_subdirectory(action)
 add_subdirectory(audioEngine)
-
-# Fetch FTXUI
-FetchContent_Declare(
-  ftxui
-  GIT_REPOSITORY https://github.com/ArthurSonzogni/FTXUI.git
-  GIT_TAG main)
-
-FetchContent_MakeAvailable(ftxui)
 
 target_compile_features(mptui PRIVATE cxx_std_20)
 

@@ -5,10 +5,12 @@
 
 enum ActionType {
   PLAY,
+  STOP,
   PAUSE_RESUME,
+  SEEK,
   SELECT,
   SET_QUEUE,
-  STOP,
+  ADVANCE_IN_QUEUE,
 };
 
 struct Action {

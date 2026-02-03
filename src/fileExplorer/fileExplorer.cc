@@ -1,106 +1,122 @@
 #include <action/action.hh>
 #include <algorithm>
 #include <fileExplorer.hh>
+#include <ftxui/component/mouse.hpp>
 #include <ftxui/dom/elements.hpp>
 #include <track/track.hh>
 
 bool FileExplorer::handleMouse(ftxui::Event event) {
-  bool flag = false;
-  // Handle mouse events if necessary
-  auto &m = event.mouse();
+  const auto m = event.mouse();
 
   if (!box_.Contain(m.x, m.y)) {
-    focused = false;
-    if (hovered_index_ != -1) {
-      hovered_index_ = -1;
+    if (hovered_ > -1) {
+      hovered_ = -1;
       return true;
     }
     return false;
   }
 
-  focused = true;
+  const auto index = m.y - box_.y_min;
 
-  if (m.y > 0 && m.y < (int)visible_nodes_.size()) {
-    hovered_index_ = m.y;
-    FileNode *node = visible_nodes_[hovered_index_];
-    if (m.button == ftxui::Mouse::Left && m.motion == ftxui::Mouse::Pressed) {
-      if (node->is_dir) {
-        node->expanded = !node->expanded;
-      } else {
-        // Handle file selection here
-        onTrackSelect(node);
-      }
-      flag = true;
+  if (m.button == ftxui::Mouse::Left && m.motion == ftxui::Mouse::Pressed &&
+      hovered_ > -1) {
+    visible_nodes_[hovered_]->is_dir ? onDirectorySelect() : onTrackSelect();
+    return true;
+  } else if (m.button == ftxui::Mouse::WheelDown) {
+    const int view_height = BoxHeight();
+    const int total = (int)visible_nodes_.size();
+
+    if (view_height <= 0 || total <= view_height) {
+      return false; // nothing to scroll
     }
+
+    // already at the bottom
+    if (render_end_ >= total) {
+      return false;
+    }
+
+    ++render_begin_;
+    ++render_end_;
+    return true;
+  } else if (m.button == ftxui::Mouse::WheelUp) {
+    const int view_height = BoxHeight();
+    const int total = (int)visible_nodes_.size();
+
+    if (view_height <= 0 || total <= view_height) {
+      return false; // nothing to scroll
+    }
+
+    // already at the top
+    if (render_begin_ <= 0) {
+      return false;
+    }
+
+    --render_begin_;
+    --render_end_;
+    return true;
   } else {
-    if (hovered_index_ != -1)
-      flag = true;
-    hovered_index_ = -1; // No selection
-  }
-  return flag;
-}
+    const int visible_count =
+        std::min(render_end_ - render_begin_,
+                 (int)visible_nodes_.size() - render_begin_);
 
-bool FileExplorer::handleKeyboard(ftxui::Event event) {
-  bool flag = false;
-
-  if (event == ftxui::Event::ArrowDown) {
-    hovered_index_ =
-        std::min(hovered_index_ + 1, (int)visible_nodes_.size() - 1);
-    flag = true;
-  }
-
-  else if (event == ftxui::Event::ArrowUp) {
-    hovered_index_ = std::max(hovered_index_ - 1, 1);
-    flag = true;
-  }
-
-  else if (event == ftxui::Event::Return) {
-    FileNode *node = visible_nodes_[hovered_index_];
-    if (node->is_dir) {
-      node->expanded = !node->expanded;
+    if (index >= 0 && index < visible_count) {
+      hovered_ = index + render_begin_;
     } else {
-      // Handle file selection here
-      onTrackSelect(node);
+      hovered_ = -1;
     }
-    flag = true;
+    return true;
   }
 
-  else if (event == ftxui::Event::Escape) {
-    // Handle exit or other action
-    hovered_index_ = -1;
-    flag = true;
-  }
-
-  return flag;
+  return false;
 }
+
+bool FileExplorer::handleKeyboard(ftxui::Event event) { return false; }
 
 bool FileExplorer::OnEvent(ftxui::Event event) {
-  bool flag = false;
-
-  if (event.is_mouse()) {
-    flag = handleMouse(event);
-  } else {
-    flag = handleKeyboard(event);
-  }
-
+  bool flag = event.is_mouse() ? handleMouse(event) : handleKeyboard(event);
   if (flag) {
     visible_nodes_.clear();
     BuildVisible(*root_);
   }
-
   return flag;
 }
 
 ftxui::Element FileExplorer::OnRender() {
   auto nodes = renderNode(
-      *root_, hovered_index_ == -1 ? nullptr : visible_nodes_[hovered_index_],
-      selected_);
+      *root_, hovered_ > -1 ? visible_nodes_[hovered_] : nullptr, selected_);
+
+  const int total = (int)nodes.size();
+  const int box_height = BoxHeight();
+
+  if (box_height > 0 && total > box_height) {
+    // Clamp render_begin_ into a valid range based on the current box height.
+    if (render_begin_ < 0) {
+      render_begin_ = 0;
+    }
+    if (render_begin_ > total - box_height) {
+      render_begin_ = total - box_height;
+    }
+
+    render_end_ = std::min(total, render_begin_ + box_height);
+
+    ftxui::Elements visible;
+    visible.reserve(render_end_ - render_begin_);
+    for (int i = render_begin_; i < render_end_; ++i) {
+      visible.push_back(nodes[i]);
+    }
+    nodes = std::move(visible);
+  } else {
+    // Everything fits; reset window to cover all nodes.
+    render_begin_ = 0;
+    render_end_ = total;
+  }
 
   return ftxui::vbox(nodes) | ftxui::flex | ftxui::reflect(box_);
 }
 
 void FileExplorer::BuildVisible(FileNode &node) {
-  visible_nodes_.push_back(&node);
+  if (!node.is_root)
+    visible_nodes_.push_back(&node);
   if (node.is_dir && node.expanded) {
     for (auto &child : node.children) {
       BuildVisible(*child);
@@ -108,17 +124,42 @@ void FileExplorer::BuildVisible(FileNode &node) {
   }
 }
 
-void FileExplorer::onTrackSelect(FileNode *node) {
+void FileExplorer::onTrackSelect() {
+  if (hovered_ == -1)
+    return;
+
   std::unique_ptr<Action> action = std::unique_ptr<Action>(new Action());
 
-  if (node == selected_) {
+  if (selected_ == visible_nodes_[hovered_]) {
     action->type = PAUSE_RESUME;
   } else {
-    selected_ = node;
-
+    selected_ = visible_nodes_[hovered_];
     action->type = SELECT;
-    action->track = node->track;
+    action->track = selected_->track;
   }
 
   actions_->push(std::move(action));
+}
+
+namespace {
+int get_dir_expanded_size(FileNode *node) {
+  int result = node->children.size();
+  for (auto &child : node->children) {
+    if (child->is_dir) {
+      result += get_dir_expanded_size(child.get());
+    }
+  }
+  return result;
+}
+}; // namespace
+
+void FileExplorer::onDirectorySelect() {
+  auto dir = visible_nodes_[hovered_];
+  const auto dir_size = get_dir_expanded_size(dir);
+
+  if (dir->expanded) {
+    dir->expanded = false;
+  } else {
+    dir->expanded = true;
+  }
 }

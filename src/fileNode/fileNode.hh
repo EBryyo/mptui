@@ -1,9 +1,11 @@
 #pragma once
 #include <filesystem>
 #include <ftxui/dom/elements.hpp>
+#include <memory>
 #include <string>
-#include <track/track.hh>
 #include <vector>
+
+struct Track;
 
 struct FileNode {
   std::string name;
