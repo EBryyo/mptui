@@ -6,6 +6,7 @@ add_subdirectory(track)
 add_subdirectory(musicPlayer)
 add_subdirectory(trackQueue)
 add_subdirectory(stateWrapper)
+add_subdirectory(action)
 
 # Fetch FTXUI
 FetchContent_Declare(
@@ -17,5 +18,14 @@ FetchContent_MakeAvailable(ftxui)
 
 target_compile_features(mptui PRIVATE cxx_std_20)
 
-target_link_libraries(mptui PRIVATE project_warnings fileExplorer fileNode trackQueue musicPlayer stateWrapper
-                                    ftxui::screen ftxui::dom ftxui::component)
+target_link_libraries(
+  mptui
+  PRIVATE project_warnings
+          fileExplorer
+          fileNode
+          trackQueue
+          musicPlayer
+          stateWrapper
+          ftxui::screen
+          ftxui::dom
+          ftxui::component)

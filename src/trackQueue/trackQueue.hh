@@ -1,11 +1,14 @@
 #pragma once
+#include <action/action.hh>
+#include <algorithm>
 #include <ftxui/component/component_base.hpp>
 #include <track/track.hh>
 #include <vector>
 
 class TrackQueue : public ftxui::ComponentBase {
 public:
-  TrackQueue() : index_(-1) {}
+  TrackQueue(std::queue<std::unique_ptr<Action>> *actions)
+      : actions_{actions} {}
 
   // clears all current information
   void clear() {
@@ -20,6 +23,11 @@ public:
   std::vector<std::shared_ptr<Track>> getQueue() { return track_queue_; }
 
   void setIndex(int index) { index_ = index; }
+  void incrementIndex() {
+    if (index_ != -1 && index_ < track_queue_.size()) {
+      index_++;
+    }
+  }
   int getIndex() { return index_; }
 
   std::shared_ptr<Track> getActiveTrack() {
@@ -35,5 +43,6 @@ public:
 
 private:
   std::vector<std::shared_ptr<Track>> track_queue_;
-  int index_;
+  std::queue<std::unique_ptr<Action>> *actions_;
+  int index_ = -1;
 };

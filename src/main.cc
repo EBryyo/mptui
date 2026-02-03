@@ -1,3 +1,4 @@
+#include <chrono>
 #include <fileNode/fileNode.hh>
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/component_base.hpp>
@@ -6,15 +7,15 @@
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/screen/screen.hpp>
 #include <stateWrapper/stateWrapper.hh>
+#include <thread>
 
 #define FILES_PATH "~/Music/"
 
-int main(int argc, char **argv) {
+int main() {
   auto root = createTree(FILES_PATH);
-
-  ftxui::Component state = std::make_shared<StateWrapper>(root);
-
   auto screen = ftxui::ScreenInteractive::Fullscreen();
+
+  auto state = std::make_shared<StateWrapper>(root, &screen);
 
   auto layout = ftxui::Renderer(state, [&] {
     return ftxui::window(ftxui::text("MPTUI") | ftxui::bold, state->Render()) |
@@ -27,7 +28,20 @@ int main(int argc, char **argv) {
   // Ensure the file explorer has initial keyboard focus.
   state->TakeFocus();
 
+  std::atomic<bool> running = true;
+
+  std::thread execution_loop = std::thread([&] {
+    while (running.load()) {
+      state->ProcessActions();
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+  });
+
   screen.Loop(layout);
+
+  running.store(false);
+
+  execution_loop.join();
 
   return 0;
 }

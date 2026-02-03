@@ -13,7 +13,6 @@ enum ActionType {
 
 struct Action {
   ActionType type;
-  std::optional<Track> track;
-  int number;
-  std::optional<std::unique_ptr<std::queue<Track>>> queue;
+  std::optional<std::shared_ptr<Track>> track;
+  std::optional<std::vector<std::shared_ptr<Track>>> queue;
 };

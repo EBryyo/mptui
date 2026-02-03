@@ -1,6 +1,8 @@
+#include <action/action.hh>
 #include <algorithm>
 #include <fileExplorer.hh>
 #include <ftxui/dom/elements.hpp>
+#include <track/track.hh>
 
 bool FileExplorer::handleMouse(ftxui::Event event) {
   bool flag = false;
@@ -8,7 +10,7 @@ bool FileExplorer::handleMouse(ftxui::Event event) {
   auto &m = event.mouse();
 
   if (!box_.Contain(m.x, m.y)) {
-    mouse_hovered_ = false;
+    focused = false;
     if (hovered_index_ != -1) {
       hovered_index_ = -1;
       return true;
@@ -16,7 +18,7 @@ bool FileExplorer::handleMouse(ftxui::Event event) {
     return false;
   }
 
-  mouse_hovered_ = true;
+  focused = true;
 
   if (m.y > 0 && m.y < (int)visible_nodes_.size()) {
     hovered_index_ = m.y;
@@ -27,6 +29,7 @@ bool FileExplorer::handleMouse(ftxui::Event event) {
       } else {
         // Handle file selection here
         selected_ = node;
+        onTrackSelect(selected_);
       }
       flag = true;
     }
@@ -59,6 +62,7 @@ bool FileExplorer::handleKeyboard(ftxui::Event event) {
     } else {
       // Handle file selection here
       selected_ = node;
+      onTrackSelect(node);
     }
     flag = true;
   }
@@ -90,7 +94,6 @@ bool FileExplorer::OnEvent(ftxui::Event event) {
 }
 
 ftxui::Element FileExplorer::OnRender() {
-  // return ftxui::text("I am rendering") | ftxui::border | ftxui::flex;
   return ftxui::vbox(renderNode(
              *root_,
              hovered_index_ == -1 ? nullptr : visible_nodes_[hovered_index_],
@@ -105,4 +108,15 @@ void FileExplorer::BuildVisible(FileNode &node) {
       BuildVisible(*child);
     }
   }
+}
+
+void FileExplorer::onTrackSelect(FileNode *node) {
+  std::shared_ptr<Track> track = node->track;
+
+  std::unique_ptr<Action> action = std::unique_ptr<Action>(new Action());
+
+  action->type = SELECT;
+  action->track = track;
+
+  actions_->push(std::move(action));
 }
