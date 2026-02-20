@@ -39,10 +39,23 @@ public:
   // Component functions
   ftxui::Element OnRender() override;
 
+  bool OnEvent(ftxui::Event event) override;
+
   bool Focusable() const override { return true; }
 
 private:
   std::vector<std::shared_ptr<Track>> track_queue_;
   std::queue<std::unique_ptr<Action>> *actions_;
   int index_ = -1;
+
+  int hovered_ = -1;
+  ftxui::Box box_;
+
+  int render_begin_ = 0;
+  int render_end_ = 0;
+
+  int BoxHeight() const { return box_.y_max - box_.y_min + 1; }
+
+  bool handleMouse(ftxui::Event event);
+  bool handleKeyboard(ftxui::Event event);
 };

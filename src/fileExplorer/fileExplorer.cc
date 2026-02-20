@@ -70,7 +70,112 @@ bool FileExplorer::handleMouse(ftxui::Event event) {
   return false;
 }
 
-bool FileExplorer::handleKeyboard(ftxui::Event event) { return false; }
+bool FileExplorer::handleKeyboard(ftxui::Event event) {
+  const int total = (int)visible_nodes_.size();
+  if (total == 0) {
+    return false;
+  }
+
+  const int box_height = BoxHeight();
+
+  // Activate the hovered item.
+  if (event == ftxui::Event::Return) {
+    if (hovered_ < 0 || hovered_ >= total) {
+      return false;
+    }
+
+    if (visible_nodes_[hovered_]->is_dir) {
+      onDirectorySelect();
+    } else {
+      onTrackSelect();
+    }
+    return true;
+  }
+
+  // Clear hover.
+  if (event == ftxui::Event::Escape) {
+    if (hovered_ == -1) {
+      return false;
+    }
+    hovered_ = -1;
+    return true;
+  }
+
+  // Move hover down.
+  if (event == ftxui::Event::ArrowDown) {
+    if (hovered_ == -1) {
+      hovered_ = std::max(0, render_begin_);
+    } else if (hovered_ < total - 1) {
+      ++hovered_;
+    } else {
+      return false; // already at last item
+    }
+
+    if (box_height > 0 && total > box_height) {
+      if (render_begin_ < 0) {
+        render_begin_ = 0;
+      }
+      if (render_end_ <= render_begin_) {
+        render_end_ = render_begin_ + box_height;
+      }
+
+      if (hovered_ >= render_end_) {
+        render_end_ = hovered_ + 1;
+        render_begin_ = render_end_ - box_height;
+      }
+
+      if (render_begin_ < 0) {
+        render_begin_ = 0;
+      }
+      if (render_end_ > total) {
+        render_end_ = total;
+        render_begin_ = std::max(0, render_end_ - box_height);
+      }
+    }
+    return true;
+  }
+
+  // Move hover up.
+  if (event == ftxui::Event::ArrowUp) {
+    if (hovered_ == -1) {
+      if (box_height > 0 && total > box_height) {
+        hovered_ = std::min(total - 1, render_begin_ + box_height - 1);
+      } else {
+        hovered_ = total - 1;
+      }
+    } else if (hovered_ > 0) {
+      --hovered_;
+    } else {
+      return false; // already at first item
+    }
+
+    if (box_height > 0 && total > box_height) {
+      if (render_begin_ < 0) {
+        render_begin_ = 0;
+      }
+      if (render_end_ <= render_begin_) {
+        render_end_ = render_begin_ + box_height;
+      }
+
+      if (hovered_ < render_begin_) {
+        render_begin_ = hovered_;
+        render_end_ = render_begin_ + box_height;
+      }
+
+      if (render_begin_ < 0) {
+        render_begin_ = 0;
+        render_end_ = std::min(total, box_height);
+      }
+      if (render_end_ > total) {
+        render_end_ = total;
+        render_begin_ = std::max(0, render_end_ - box_height);
+      }
+    }
+    return true;
+  }
+
+  return false;
+}
 
 bool FileExplorer::OnEvent(ftxui::Event event) {
   bool flag = event.is_mouse() ? handleMouse(event) : handleKeyboard(event);
@@ -80,6 +185,22 @@ bool FileExplorer::OnEvent(ftxui::Event event) {
   }
   return flag;
 }
+
+namespace {
+FileNode *FindNodeForTrack(FileNode *node,
+                           const std::shared_ptr<Track> &track) {
+  if (node->track == track) {
+    return node;
+  }
+
+  for (auto &child : node->children) {
+    if (auto *found = FindNodeForTrack(child.get(), track)) {
+      return found;
+    }
+  }
+  return nullptr;
+}
+} // namespace
 
 ftxui::Element FileExplorer::OnRender() {
   auto nodes = renderNode(
@@ -114,6 +235,57 @@ ftxui::Element FileExplorer::OnRender() {
   return ftxui::vbox(nodes) | ftxui::flex | ftxui::reflect(box_);
 }
 
+void FileExplorer::SelectTrack(std::shared_ptr<Track> track) {
+  if (!track) {
+    return;
+  }
+
+  auto *node = FindNodeForTrack(root_.get(), track);
+  if (!node) {
+    return;
+  }
+
+  selected_ = node;
+
+  // Ensure all parents are expanded so the selected node is visible.
+  auto parent = node->parent;
+  while (parent) {
+    parent->expanded = true;
+    parent = parent->parent;
+  }
+
+  // Rebuild the visible node list to reflect any expansion changes.
+  visible_nodes_.clear();
+  BuildVisible(*root_);
+
+  // Position hover and scroll window so the selected node is visible.
+  int selected_index = -1;
+  for (int i = 0; i < (int)visible_nodes_.size(); ++i) {
+    if (visible_nodes_[i] == node) {
+      selected_index = i;
+      break;
+    }
+  }
+
+  if (selected_index == -1) {
+    return;
+  }
+
+  hovered_ = selected_index;
+
+  const int box_height = BoxHeight();
+  if (box_height <= 0) {
+    render_begin_ = 0;
+    render_end_ = (int)visible_nodes_.size();
+    return;
+  }
+
+  if (selected_index < render_begin_ || selected_index >= render_end_) {
+    render_begin_ = std::max(0, selected_index - box_height / 2);
+    render_end_ = std::min((int)visible_nodes_.size(), render_begin_ + box_height);
+  }
+}
+
 void FileExplorer::BuildVisible(FileNode &node) {
   if (!node.is_root)
     visible_nodes_.push_back(&node);
@@ -136,6 +308,23 @@ void FileExplorer::onTrackSelect() {
     selected_ = visible_nodes_[hovered_];
     action->type = SELECT;
     action->track = selected_->track;
+
+    // If the selected track belongs to an album directory, build a
+    // queue containing the entire album and attach it to the action.
+    auto parent = selected_->parent;
+    if (parent && parent->is_album) {
+      std::vector<std::shared_ptr<Track>> album_tracks;
+      album_tracks.reserve(parent->children.size());
+      for (auto &child : parent->children) {
+        if (child->track) {
+          album_tracks.push_back(child->track);
+        }
+      }
+
+      if (!album_tracks.empty()) {
+        action->queue = album_tracks;
+      }
+    }
   }
 
   actions_->push(std::move(action));

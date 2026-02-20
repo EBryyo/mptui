@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <vector>
 
 struct FileNode;
 
@@ -11,6 +12,9 @@ struct Track {
   std::string artist;
   int duration;
   int index;
+  // Optional embedded cover image metadata loaded from the audio file.
+  std::string image_mime_type;           // e.g. "image/jpeg", "image/png"
+  std::vector<unsigned char> image_data; // raw image bytes
   FileNode *node = nullptr;
 };
 

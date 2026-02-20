@@ -30,10 +30,12 @@ int main() {
 
   std::atomic<bool> running = true;
 
-  std::thread execution_loop = std::thread([&] {
+  // Background thread: periodically post a custom event so the UI
+  // thread can process actions and refresh audio state.
+  std::thread tick_loop = std::thread([&] {
     while (running.load()) {
-      state->ProcessActions();
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+      screen.PostEvent(ftxui::Event::Custom);
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
   });
 
@@ -41,7 +43,7 @@ int main() {
 
   running.store(false);
 
-  execution_loop.join();
+  tick_loop.join();
 
   return 0;
 }

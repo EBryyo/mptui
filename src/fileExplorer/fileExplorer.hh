@@ -30,6 +30,10 @@ public:
 
   bool Focusable() const override { return true; }
 
+  // Update the selection based on a Track coming from elsewhere
+  // (e.g. from the track queue component).
+  void SelectTrack(std::shared_ptr<Track> track);
+
 private:
   std::shared_ptr<FileNode> root_;
   std::vector<FileNode *> visible_nodes_;
@@ -40,7 +44,7 @@ private:
   int hovered_;
   FileNode *selected_;
 
-  int BoxHeight() { return box_.y_max - box_.y_min; }
+  int BoxHeight() { return box_.y_max - box_.y_min + 1; }
 
   ftxui::Box box_;
   bool focused = false;

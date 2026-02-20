@@ -21,6 +21,9 @@ public:
   void Stop();
   void Seek(double seconds);
 
+  void SetVolume(float volume);
+  float GetVolume() const;
+
   AudioState Snapshot() const;
   bool IsFinished() const;
 

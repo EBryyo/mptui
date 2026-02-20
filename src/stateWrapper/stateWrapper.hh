@@ -6,6 +6,7 @@
 #include <ftxui/component/component_base.hpp>
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/component/task.hpp>
+#include <chrono>
 #include <memory>
 #include <musicPlayer/musicPlayer.hh>
 #include <track/track.hh>

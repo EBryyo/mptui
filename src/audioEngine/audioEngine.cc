@@ -98,3 +98,15 @@ bool AudioEngine::IsFinished() const {
 
   return cursor >= length;
 }
+
+void AudioEngine::SetVolume(float volume) {
+  if (volume < 0.0f)
+    volume = 0.0f;
+  if (volume > 1.0f)
+    volume = 1.0f;
+  ma_engine_set_volume(&engine_, volume);
+}
+
+float AudioEngine::GetVolume() const {
+  return ma_engine_get_volume(const_cast<ma_engine *>(&engine_));
+}
